@@ -123,6 +123,10 @@ var vueLazyload = (function (Vue, _ref) {
             Loaded.push(item.src);
         }).catch(function (error) {
             setElRender(item.el, item.bindType, item.error, 'error');
+            _.on(item.el, 'click', function(){
+                _.off(item.el, 'click');
+                loadImageAsync(item);
+            }
         });
     };
 
