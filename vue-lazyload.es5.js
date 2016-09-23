@@ -126,7 +126,7 @@ var vueLazyload = (function (Vue, _ref) {
             _.on(item.el, 'click', function(){
                 _.off(item.el, 'click');
                 loadImageAsync(item);
-            }
+            });
         });
     };
 
