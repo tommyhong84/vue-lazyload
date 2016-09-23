@@ -108,6 +108,10 @@ export default (Vue, { preLoad = 1.3, error, loading, attempt = 3 }) => {
             })
             .catch((error) => {
                 setElRender(item.el, item.bindType, item.error, 'error')
+                _.on(item.el, 'click', function(){
+                    _.off(item.el, 'click')
+                    loadImageAsync(item)
+                })
             })
     }
 
