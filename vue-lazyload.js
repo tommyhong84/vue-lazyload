@@ -1,4 +1,7 @@
+import util from 'util'
+
 const inBrowser = typeof window !== 'undefined'
+let parentEls = []
 
 if (!Array.prototype.$remove) {
   Object.defineProperty(Array.prototype, '$remove', {
@@ -57,10 +60,10 @@ export default (Vue, Options = {}) => {
   }
 
   const _ = {
-    on (el, type, func) {
+    on(el, type, func) {
       el.addEventListener(type, func)
     },
-    off (el, type, func) {
+    off(el, type, func) {
       el.removeEventListener(type, func)
     }
   }
@@ -71,17 +74,23 @@ export default (Vue, Options = {}) => {
     }
   }, 300)
 
-  const onListen = (el, start) => {
+  // 增加 @param event 只绑定指定的事件
+  const onListen = (el, start, event) => {
     if (start) {
-      ListenEvents.forEach((evt) => {
+      if (event) {
+        return _.on(el, event, lazyLoadHandler)
+      }
+      return ListenEvents.forEach((evt) => {
         _.on(el, evt, lazyLoadHandler)
       })
-    } else {
-      Init.hasbind = false
-      ListenEvents.forEach((evt) => {
-        _.off(el, evt, lazyLoadHandler)
-      })
     }
+    Init.hasbind = false
+    if (event) {
+      return _.off(el, event, lazyLoadHandler)
+    }
+    return ListenEvents.forEach((evt) => {
+      _.off(el, evt, lazyLoadHandler)
+    })
   }
 
   const checkCanShow = (listener) => {
@@ -161,7 +170,18 @@ export default (Vue, Options = {}) => {
       }
     }
 
-    if (Init.hasbind && Listeners.length === 0) {
+    let parentEl = null
+
+    if (binding.modifiers) {
+      parentEl = util.up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
+    }
+
+    if (parentEl) {
+      onListen(parentEl, false, 'scroll')
+      parentEls.$remove(parentEl)
+    }
+
+    if (Init.hasbind && Listeners.length == 0) {
       onListen(window, false)
     }
   }
@@ -182,7 +202,7 @@ export default (Vue, Options = {}) => {
   }
 
   const addListener = (el, binding, vnode) => {
-    if (~(['error', 'loaded'].indexOf(el.getAttribute('lazy'))) && binding.oldValue === binding.value) {
+    if (~(['error', 'loaded'].indexOf(el.getAttribute('lazy'))) && (binding.oldValue === binding.value) && el.src === binding.value) {
       return
     }
     if (checkElExist(el)) return
@@ -204,7 +224,7 @@ export default (Vue, Options = {}) => {
 
     Vue.nextTick(() => {
       if (binding.modifiers) {
-        parentEl = window.document.getElementById(Object.keys(binding.modifiers)[0])
+        parentEl = util.up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
       }
 
       Listeners.push({
@@ -220,9 +240,9 @@ export default (Vue, Options = {}) => {
       if (Listeners.length > 0 && !Init.hasbind) {
         Init.hasbind = true
         onListen(window, true)
-
-        if (parentEl) {
-          onListen(parentEl, true)
+        if (parentEl && !~parentEls.indexOf(parentEl)) {
+          parentEls.push(parentEl)
+          onListen(parentEl, true, 'scroll')
         }
       }
     })
@@ -239,7 +259,7 @@ export default (Vue, Options = {}) => {
   } else {
     Vue.directive('lazy', {
       bind: lazyLoadHandler,
-      update (newValue, oldValue) {
+      update(newValue, oldValue) {
         addListener(this.el, {
           modifiers: this.modifiers,
           arg: this.arg,
@@ -247,7 +267,7 @@ export default (Vue, Options = {}) => {
           oldValue: oldValue
         })
       },
-      unbind () {
+      unbind() {
         componentWillUnmount(this.el)
       }
     })
