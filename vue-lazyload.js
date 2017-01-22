@@ -1,21 +1,14 @@
-import util from 'util'
+import { up } from 'util'
 
 const inBrowser = typeof window !== 'undefined'
 let parentEls = []
 
-if (!Array.prototype.$remove) {
-  Object.defineProperty(Array.prototype, '$remove', {
-    value: function (item) {
-      if (!this.length) return
-      const index = this.indexOf(item)
-      if (index > -1) {
-        return this.splice(index, 1)
-      }
-    },
-    writable: false,
-    enumerable: false,
-    configurable: false
-  })
+function remove (arr, item) {
+  if (!arr.length) return
+  const index = arr.indexOf(item)
+  if (index > -1) {
+    return arr.splice(index, 1)
+  }
 }
 
 export default (Vue, Options = {}) => {
@@ -52,18 +45,17 @@ export default (Vue, Options = {}) => {
       }
       if (elapsed >= delay) {
         runCallback()
-      }
-      else {
+      } else {
         timeout = setTimeout(runCallback, delay)
       }
     }
   }
 
   const _ = {
-    on(el, type, func) {
+    on (el, type, func) {
       el.addEventListener(type, func)
     },
-    off(el, type, func) {
+    off (el, type, func) {
       el.removeEventListener(type, func)
     }
   }
@@ -95,7 +87,7 @@ export default (Vue, Options = {}) => {
 
   const checkCanShow = (listener) => {
     if (imageCache.indexOf(listener.src) > -1) {
-      Listeners.$remove(listener)
+      remove(Listeners, listener)
       return setElRender(listener.el, listener.bindType, listener.src, 'loaded')
     }
     let rect = listener.el.getBoundingClientRect()
@@ -117,7 +109,6 @@ export default (Vue, Options = {}) => {
     el.setAttribute('lazy', state)
   }
 
-
   const render = (item) => {
     if (item.attempt >= Init.attempt) return false
 
@@ -126,12 +117,12 @@ export default (Vue, Options = {}) => {
     const resolve = (image) => {
       setElRender(item.el, item.bindType, item.src, 'loaded')
       imageCache.push(item.src)
-      Listeners.$remove(item)
+      remove(Listeners, item)
     }
 
-    const reject = (error) => {
+    const reject = () => {
       setElRender(item.el, item.bindType, item.error, 'error')
-      Listeners.$remove(item)
+      remove(Listeners, item)
       _.on(item.el, 'click', function (e) {
         e.stopPropagation()
         setElRender(item.el, item.bindType, Options.loading || DEFAULT_URL, 'loading')
@@ -144,8 +135,7 @@ export default (Vue, Options = {}) => {
   }
 
   const loadImageAsync = (item, resolve, reject) => {
-
-    let image = new Image()
+    let image = document.createElement('img')
     image.src = item.src
 
     image.onload = function () {
@@ -173,15 +163,15 @@ export default (Vue, Options = {}) => {
     let parentEl = null
 
     if (binding.modifiers) {
-      parentEl = util.up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
+      parentEl = up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
     }
 
     if (parentEl) {
       onListen(parentEl, false, 'scroll')
-      parentEls.$remove(parentEl)
+      remove(parentEls, parentEl)
     }
 
-    if (Init.hasbind && Listeners.length == 0) {
+    if (Init.hasbind && Listeners.length === 0) {
       onListen(window, false)
     }
   }
@@ -224,7 +214,7 @@ export default (Vue, Options = {}) => {
 
     Vue.nextTick(() => {
       if (binding.modifiers) {
-        parentEl = util.up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
+        parentEl = up(el, `[data-${Object.keys(binding.modifiers)[0]}]`)// window.document.getElementById(Object.keys(binding.modifiers)[0])
       }
 
       Listeners.push({
@@ -259,7 +249,7 @@ export default (Vue, Options = {}) => {
   } else {
     Vue.directive('lazy', {
       bind: lazyLoadHandler,
-      update(newValue, oldValue) {
+      update (newValue, oldValue) {
         addListener(this.el, {
           modifiers: this.modifiers,
           arg: this.arg,
@@ -267,7 +257,7 @@ export default (Vue, Options = {}) => {
           oldValue: oldValue
         })
       },
-      unbind() {
+      unbind () {
         componentWillUnmount(this.el)
       }
     })
